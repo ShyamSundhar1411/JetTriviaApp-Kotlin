@@ -60,6 +60,8 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.viewmodel.compose)
+    implementation(libs.retrofit2)
     implementation(libs.coroutines)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
