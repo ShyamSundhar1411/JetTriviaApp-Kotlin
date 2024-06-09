@@ -34,6 +34,7 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 coroutines = {group = "org.jetbrains.kotlinx",name = "kotlinx-coroutines-android",version.ref = "coroutines"}
 retrofit2 =  {group = "com.squareup.retrofit2",name = "retrofit",version.ref = "retrofit"}
+converter-gson = {group = "com.squareup.retrofit2",name = "converter-gson",version.ref = "retrofit"}
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

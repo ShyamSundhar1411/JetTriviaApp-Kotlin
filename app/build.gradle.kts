@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.viewmodel.compose)
     implementation(libs.retrofit2)
+    implementation(libs.converter.gson)
     implementation(libs.coroutines)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
