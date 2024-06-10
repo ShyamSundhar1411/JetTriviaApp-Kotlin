@@ -1,5 +1,5 @@
 package com.example.jettrivaapp.repository
-
+import android.util.Log
 import com.example.jettrivaapp.data.DataOrException
 import com.example.jettrivaapp.model.QuestionItem
 import com.example.jettrivaapp.network.QuestionApi
@@ -14,6 +14,8 @@ class QuestionRepository @Inject constructor(private val api: QuestionApi) {
             if(dataOrException.data.toString().isNotEmpty()) dataOrException.loading = false
         }catch(exception: Exception){
             dataOrException.e = exception
+            Log.d("Exc", "getAllQuestions: ${dataOrException.e!!.localizedMessage}")
+
         }
         return dataOrException
     }
