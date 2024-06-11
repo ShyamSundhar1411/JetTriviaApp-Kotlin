@@ -1,26 +1,25 @@
 package com.example.jettrivaapp.component
 
-import android.graphics.Paint.Align
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -41,7 +40,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.jettrivaapp.model.QuestionItem
 import com.example.jettrivaapp.util.AppColors
 import com.example.jettrivaapp.viewmodel.QuestionViewModel
@@ -50,17 +48,24 @@ import com.example.jettrivaapp.viewmodel.QuestionViewModel
 @Composable
 fun Questions(viewModel: QuestionViewModel,modifier: Modifier = Modifier){
     val questions = viewModel.getData().value.data?.toMutableList()
-    val indexState = remember {
+    val questionIndexState = remember {
         mutableIntStateOf(0)
     }
     if (viewModel.getData().value.loading == true){
         CircularProgressIndicator()
     }else{
-
+        val question = try{
+            questions?.get(questionIndexState.intValue)
+        }catch(ex: Exception){
+            null
+        }
         if (questions != null) {
-            QuestionDisplay(question = questions[0], questionIndex = indexState, viewModel, onNextClicked = {
-                Log.d("Question","${indexState.intValue}")
-            } )
+            QuestionDisplay(question = question!!,
+                questionIndexState,
+                viewModel){
+                questionIndexState.intValue += 1
+                
+            }
         }
     }
     Log.d("Size","Questions: ${questions?.size} ")
@@ -72,11 +77,30 @@ fun QuestionDisplay(
     question: QuestionItem,
     questionIndex: MutableState<Int>,
     viewModel: QuestionViewModel,
-    onNextClicked: (Int) -> Unit,
+    onNextClicked: (Int) -> Unit = {},
 )
 {
     val choicesState = remember(question){
         question.choices.toMutableList()
+    }
+    val answerState = remember(question) {
+        mutableStateOf<Int?>(null)
+    }
+    val scoreState = remember {
+        mutableIntStateOf(0)
+    }
+    val correctAnswerState = remember(question) {
+        mutableStateOf<Boolean?>(null)
+    }
+    val updateAnswer: (Int) -> Unit = remember(question) {
+        {
+            answerState.value = it
+            correctAnswerState.value = choicesState[it] == question.answer
+            if (correctAnswerState.value == true){
+                scoreState.intValue+=1
+            }
+
+        }
     }
     val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f,10f),0f)
     Surface(modifier =
@@ -91,14 +115,25 @@ fun QuestionDisplay(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
             ) {
-                QuestionTracker()
+                if(questionIndex.value >= 4){
+                    viewModel.getTotalQuestionCount()
+                        ?.let { ShowProgressMeter(score = scoreState.intValue, totalQuestions = it) }
+                }
+
+            viewModel.getTotalQuestionCount()?.let {
+                QuestionTracker(counter = questionIndex.value+1,
+                    maxQuestions = it
+                )
+            }
+
                 DrawDottedLine(pathEffect = pathEffect)
                 Column(modifier = Modifier
                     .padding(15.dp)
                     .fillMaxHeight()
                     .fillMaxWidth()
                 ) {
-                    Text(text = "What is this Question ?",
+                    Text(
+                        text = question.question,
                         modifier = Modifier
                             .padding(6.dp)
                             .align(alignment = Alignment.Start)
@@ -114,9 +149,9 @@ fun QuestionDisplay(
                         Row(modifier = Modifier
                             .padding(3.dp)
                             .fillMaxWidth()
-                            .height(45.dp)
+                            .height(55.dp)
                             .border(
-                                width = 4.dp,
+                                width = 10.dp,
                                 brush = Brush.linearGradient(
                                     colors = listOf(AppColors.mDarkPurple, AppColors.mDarkPurple)
                                 ),
@@ -131,58 +166,70 @@ fun QuestionDisplay(
                                     bottomStartPercent = 50
                                 )
                             )
-                            .background(color = Color.Transparent)
+                            .background(color = Color.Transparent),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            RadioButton(
+                                selected = (
+                                        answerState.value == index
+                                        ), onClick = {
+                                    updateAnswer(index)
+
+                                },
+                                modifier = Modifier.padding(start = 16.dp),
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = if (correctAnswerState.value == true
+                                        && index == answerState.value
+                                    ) Color.Green.copy(alpha = 0.3f)
+                                    else {
+                                        Color.Red.copy(alpha = 0.3f)
+                                    }
+                                )
+                            )
+                            val annotatedString = buildAnnotatedString {
+                                withStyle(
+                                    style = SpanStyle(
+                                        fontWeight = FontWeight.Normal,
+                                        color = if (correctAnswerState.value == true
+                                            && index == answerState.value
+                                        ) Color.Green
+                                        else if (correctAnswerState.value == false
+                                            && index == answerState.value
+                                        ) {
+                                            Color.Red
+                                        } else {
+                                            AppColors.mOffWhite
+                                        }
+                                    ))
+                                {
+                                    append(choice)
+                                }
+                            }
+                                Text(text = annotatedString, modifier = Modifier.padding(6.dp))
+
 
                         }
                     }
+                    Button(onClick = { onNextClicked(questionIndex.value) },
+                        modifier = Modifier
+                            .padding(3.dp)
+                            .align(Alignment.CenterHorizontally),
+                        shape = RoundedCornerShape(34.dp),
+                        colors = ButtonDefaults
+                            .buttonColors(
+                                AppColors.mLightBlue
+                            )
+                        ) {
+                            Text(text = "Next",
+                                modifier = Modifier.padding(4.dp),
+                                color = AppColors.mOffWhite,
+                                fontSize = 17.sp,
+
+                                )
+                        }
 
                 }
         }
     }
 }
-@Preview(showBackground = true)
-@Composable
-fun QuestionTracker(
-    modifier: Modifier = Modifier,
-    counter: Int = 10,
-    maxQuestions: Int = 100
-    ){
-    Text(text = buildAnnotatedString {
-        withStyle(style = ParagraphStyle(
-            textIndent = TextIndent.None)) {
-            withStyle(
-                style = SpanStyle(
-                    color = AppColors.mLightGray,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 27.sp
-                )
-            ) {
-                append("Question $counter/")
-                withStyle(style = SpanStyle(
-                    color = AppColors.mLightGray,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp
-                )){
-                    append("$maxQuestions")
-                }
-            }
-        }
-    },modifier = modifier.padding(15.dp)
-    )
-}
-@Composable
-fun DrawDottedLine(pathEffect: PathEffect){
-    Canvas(modifier = Modifier
-        .fillMaxWidth()
-        .height(1.dp)
-        ,
-        contentDescription =  "Dotted Line"){
-        drawLine(
-           color = AppColors.mLightGray,
-            start = Offset(0f,0f),
-            end = Offset(size.width,0f),
-            pathEffect = pathEffect
-        )
-    }
-}
+
